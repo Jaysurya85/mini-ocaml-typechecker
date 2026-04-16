@@ -15,6 +15,11 @@ typeExp(letIn(Name, VarType, ValueExpr, InExpr), T):-
         erase(Ref)
     ).
 
+/* tuple expression */
+typeExp(tupleExp(Exprs), tuple(Types)):-
+    is_list(Exprs),
+    typeExpTuple(Exprs, Types).
+
 typeExp(Fct, T):-
     \+ var(Fct), /* make sure Fct is not a variable */ 
     \+ atom(Fct), /* or an atom */
@@ -39,6 +44,12 @@ typeExpList([], []).
 typeExpList([Hin|Tin], [Hout|Tout]):-
     typeExp(Hin, Hout), /* type infer the head */
     typeExpList(Tin, Tout). /* recurse */
+
+typeExpTuple([], []).
+typeExpTuple([Expr|Exprs], [Type|Types]):-
+    typeExp(Expr, Type),
+    bType(Type),
+    typeExpTuple(Exprs, Types).
 
 /* TODO: add statements types and their type checking */
 /* global variable definition
@@ -122,6 +133,7 @@ bType(int).
 bType(float).
 bType(string).
 bType(unit). /* unit type for things that are not expressions */
+bType(tuple(Types)):- is_list(Types), bType(Types).
 /*  functions type.
     The type is a list, the last element is the return type
     E.g. add: int->int->int is represented as [int, int, int]

@@ -276,4 +276,37 @@ test(infer_invalid_for_body, [fail]) :-
         forStmt(i, int, int, exprStmt(i))
     ], _).
 
+test(typeExp_tuple_2, [nondet, true(T == tuple([int, float]))]) :-
+    typeExp(tupleExp([int, float]), T).
+
+test(typeExp_tuple_3, [nondet, true(T == tuple([int, float, string]))]) :-
+    typeExp(tupleExp([int, float, string]), T).
+
+test(typeExp_tuple_nested, [nondet, true(T == tuple([int, tuple([float, string])]))]) :-
+    typeExp(tupleExp([int, tupleExp([float, string])]), T).
+
+test(typeExp_tuple_invalid_element, [fail]) :-
+    typeExp(tupleExp([bogus]), _).
+
+test(infer_tuple_exprStmt, [nondet, true(T == tuple([int, float]))]) :-
+    infer([exprStmt(tupleExp([int, float]))], T).
+
+test(infer_tuple_in_block, [nondet, true(T == tuple([int, string]))]) :-
+    infer([
+        block([
+            exprStmt(print(string)),
+            exprStmt(tupleExp([int, string]))
+        ])
+    ], T).
+
+test(infer_tuple_in_letIn, [nondet, true(T == tuple([int, int]))]) :-
+    infer([
+        exprStmt(letIn(x, int, int, tupleExp([x, int])))
+    ], T).
+
+test(infer_tuple_nested, [nondet, true(T == tuple([tuple([int, float]), string]))]) :-
+    infer([
+        exprStmt(tupleExp([tupleExp([int, float]), string]))
+    ], T).
+
 :-end_tests(typeInf).
