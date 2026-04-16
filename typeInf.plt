@@ -183,4 +183,36 @@ test(infer_ifStmt_in_block, [nondet, true(T == unit)]) :-
         ])
     ], T).
 
+test(typeStatement_forStmt, [nondet, true(T == unit)]) :-
+    typeStatement(
+        forStmt(i, int, int, block([exprStmt(print(i))])),
+        T).
+
+test(typeStatement_forStmt_bad_start, [fail]) :-
+    typeStatement(
+        forStmt(i, float, int, block([exprStmt(print(i))])),
+        _).
+
+test(typeStatement_forStmt_bad_end, [fail]) :-
+    typeStatement(
+        forStmt(i, int, float, block([exprStmt(print(i))])),
+        _).
+
+test(typeStatement_forStmt_bad_body, [fail]) :-
+    typeStatement(
+        forStmt(i, int, int, exprStmt(i)),
+        _).
+
+test(infer_forStmt, [nondet, true(T == unit)]) :-
+    infer([
+        forStmt(i, int, int, block([exprStmt(print(i))]))
+    ], T).
+
+test(forStmt_cleanup_preserves_global, [nondet, true(T == string)]) :-
+    deleteGVars(),
+    asserta(gvar(i, string)),
+    typeStatement(forStmt(i, int, int, block([exprStmt(print(i))])), unit),
+    gvar(i, T),
+    \+ gvar(i, int).
+
 :-end_tests(typeInf).

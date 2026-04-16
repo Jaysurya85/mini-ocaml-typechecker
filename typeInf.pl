@@ -89,6 +89,17 @@ typeStatement(ifStmt(Cond, ThenBlock, ElseBlock), T):-
     typeStatement(ThenBlock, T),
     typeStatement(ElseBlock, T).
 
+/* for statement */
+typeStatement(forStmt(VarName, StartExpr, EndExpr, Body), unit):-
+    atom(VarName),
+    typeExp(StartExpr, int),
+    typeExp(EndExpr, int),
+    setup_call_cleanup(
+        asserta(gvar(VarName, int), Ref),
+        once(typeStatement(Body, unit)),
+        erase(Ref)
+    ).
+
 /* Code is simply a list of statements. The type is 
     the type of the last statement 
 */
