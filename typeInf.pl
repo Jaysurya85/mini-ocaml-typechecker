@@ -83,6 +83,12 @@ typeStatement(block(Code), T):-
     is_list(Code),
     typeCode(Code, T).
 
+/* if statement */
+typeStatement(ifStmt(Cond, ThenBlock, ElseBlock), T):-
+    typeExp(Cond, int),
+    typeStatement(ThenBlock, T),
+    typeStatement(ElseBlock, T).
+
 /* Code is simply a list of statements. The type is 
     the type of the last statement 
 */

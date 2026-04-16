@@ -145,4 +145,42 @@ test(letIn_inside_gfLet_body, [nondet, true(T == int)]) :-
         exprStmt(add1(int))
     ], T).
 
+test(typeStatement_ifStmt, [nondet, true(T == int)]) :-
+    typeStatement(
+        ifStmt(ieq(int, int),
+               block([exprStmt(iplus(int, int))]),
+               block([exprStmt(iminus(int, int))])),
+        T).
+
+test(typeStatement_ifStmt_bad_cond, [fail]) :-
+    typeStatement(
+        ifStmt(float,
+               block([exprStmt(int)]),
+               block([exprStmt(int)])),
+        _).
+
+test(typeStatement_ifStmt_branch_mismatch, [fail]) :-
+    typeStatement(
+        ifStmt(ieq(int, int),
+               block([exprStmt(int)]),
+               block([exprStmt(float)])),
+        _).
+
+test(infer_ifStmt, [nondet, true(T == int)]) :-
+    infer([
+        ifStmt(ieq(int, int),
+               block([exprStmt(iplus(int, int))]),
+               block([exprStmt(imul(int, int))]))
+    ], T).
+
+test(infer_ifStmt_in_block, [nondet, true(T == unit)]) :-
+    infer([
+        block([
+            exprStmt(print(string)),
+            ifStmt(ieq(int, int),
+                   block([gvLet(v, int, int)]),
+                   block([gvLet(w, int, int)]))
+        ])
+    ], T).
+
 :-end_tests(typeInf).
