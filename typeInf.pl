@@ -1,6 +1,9 @@
 /* match functions by unifying with arguments 
     and infering the result
 */
+
+:- dynamic gvar/2.
+
 typeExp(Fct, T):-
     \+ var(Fct), /* make sure Fct is not a variable */ 
     \+ atom(Fct), /* or an atom */
@@ -76,7 +79,7 @@ bType([H|T]):- bType(H), bType(T).
     variables. Best wy to do this is in your top predicate
 */
 
-deleteGVars():-retractall(gvar), asserta(gvar(_X,_Y):-false()).
+deleteGVars() :- retractall(gvar(_, _)).
 
 /*  builtin functions
     Each definition specifies the name and the 
@@ -105,5 +108,4 @@ functionType(Name, Args):-
 functionType(Name, Args) :-
     fType(Name, Args), !. % make deterministic
 
-% This gets wiped out but we have it here to make the linter happy
 gvar(_, _) :- false().

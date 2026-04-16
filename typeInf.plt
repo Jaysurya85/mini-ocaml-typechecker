@@ -19,6 +19,12 @@ test(typeExp_iplus_F, [fail]) :-
 test(typeExp_iplus_T, [true(T == int)]) :-
     typeExp(iplus(int, int), T).
 
+test(typeExp_builtin_conversion, [true(T == float)]) :-
+    typeExp(iToFloat(int), T).
+
+test(typeExp_builtin_print, [true(T == unit)]) :-
+    typeExp(print(string), T).
+
 % NOTE: use nondet as option to test if the test is nondeterministic
 
 % test for statement with state cleaning
@@ -40,5 +46,25 @@ test(mockedFct, [nondet]) :-
     asserta(gvar(my_fct, [int, float])), % add my_fct(int)-> float to the gloval variables
     typeExp(my_fct(X), T), % infer type of expression using or function
     assertion(X==int), assertion(T==float). % make sure the types infered are correct
+
+test(deleteGVars_cleans_globals, [fail]) :-
+    asserta(gvar(temp, int)),
+    deleteGVars(),
+    gvar(temp, int).
+
+test(infer_resets_old_globals, [nondet]) :-
+    deleteGVars(),
+    asserta(gvar(stale, string)),
+    infer([gvLet(v, T, iplus(X, Y))], unit),
+    assertion(T == int),
+    assertion(X == int),
+    assertion(Y == int),
+    \+ gvar(stale, _),
+    gvar(v, int).
+
+test(infer_two_global_lets, [nondet, true(T == unit)]) :-
+    infer([gvLet(v1, int, int), gvLet(v2, float, iToFloat(int))], T),
+    gvar(v1, int),
+    gvar(v2, float).
 
 :-end_tests(typeInf).
