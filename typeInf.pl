@@ -87,7 +87,8 @@ typeStatement(block(Code), T):-
 typeStatement(ifStmt(Cond, ThenBlock, ElseBlock), T):-
     typeExp(Cond, int),
     typeStatement(ThenBlock, T),
-    typeStatement(ElseBlock, T).
+    typeStatement(ElseBlock, T),
+    bType(T).
 
 /* for statement */
 typeStatement(forStmt(VarName, StartExpr, EndExpr, Body), unit):-
