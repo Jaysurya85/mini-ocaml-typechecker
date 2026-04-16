@@ -34,6 +34,16 @@ typeStatement(gvLet(Name, T, Code), unit):-
     bType(T), /* make sure we have an infered type */
     asserta(gvar(Name, T)). /* add definition to database */
 
+/* expression statement */
+typeStatement(exprStmt(Expr), T):-
+    typeExp(Expr, T),
+    bType(T).
+
+/* block statement */
+typeStatement(block(Code), T):-
+    is_list(Code),
+    typeCode(Code, T).
+
 /* Code is simply a list of statements. The type is 
     the type of the last statement 
 */

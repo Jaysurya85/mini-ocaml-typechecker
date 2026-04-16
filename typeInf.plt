@@ -67,4 +67,23 @@ test(infer_two_global_lets, [nondet, true(T == unit)]) :-
     gvar(v1, int),
     gvar(v2, float).
 
+test(typeStatement_exprStmt, [true(T == int)]) :-
+    typeStatement(exprStmt(iplus(int, int)), T).
+
+test(typeStatement_block_expr_last, [nondet, true(T == int)]) :-
+    typeStatement(block([gvLet(v, int, int), exprStmt(iplus(int, int))]), T).
+
+test(typeStatement_block_unit_last, [nondet, true(T == unit)]) :-
+    typeStatement(block([exprStmt(print(string)), gvLet(v, int, int)]), T).
+
+test(infer_exprStmt, [nondet, true(T == int)]) :-
+    infer([exprStmt(iplus(int, int))], T).
+
+test(infer_block, [nondet, true(T == int)]) :-
+    infer([block([gvLet(v, int, int), exprStmt(iplus(int, int))])], T),
+    gvar(v, int).
+
+test(infer_nested_block, [nondet, true(T == float)]) :-
+    infer([block([exprStmt(print(string)), block([exprStmt(iToFloat(int))])])], T).
+
 :-end_tests(typeInf).
