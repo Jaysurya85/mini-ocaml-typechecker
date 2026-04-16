@@ -20,6 +20,13 @@ typeExp(tupleExp(Exprs), tuple(Types)):-
     is_list(Exprs),
     typeExpTuple(Exprs, Types).
 
+/* sum value expression */
+typeExp(sumVal(Tag, Expr, sum(Variants)), sum(Variants)):-
+    atom(Tag),
+    bType(sum(Variants)),
+    member(Tag-Type, Variants),
+    typeExp(Expr, Type).
+
 typeExp(Fct, T):-
     \+ var(Fct), /* make sure Fct is not a variable */ 
     \+ atom(Fct), /* or an atom */
@@ -141,6 +148,7 @@ bType(float).
 bType(string).
 bType(unit). /* unit type for things that are not expressions */
 bType(tuple(Types)):- is_list(Types), bType(Types).
+bType(sum(Variants)):- is_list(Variants), bTypeSumVariants(Variants).
 /*  functions type.
     The type is a list, the last element is the return type
     E.g. add: int->int->int is represented as [int, int, int]
@@ -148,6 +156,12 @@ bType(tuple(Types)):- is_list(Types), bType(Types).
  */
 bType([H]):- bType(H).
 bType([H|T]):- bType(H), bType(T).
+
+bTypeSumVariants([]).
+bTypeSumVariants([Tag-Type|Variants]):-
+    atom(Tag),
+    bType(Type),
+    bTypeSumVariants(Variants).
 
 /*
     TODO: as you encounter global variable definitions

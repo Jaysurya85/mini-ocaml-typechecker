@@ -309,4 +309,53 @@ test(infer_tuple_nested, [nondet, true(T == tuple([tuple([int, float]), string])
         exprStmt(tupleExp([tupleExp([int, float]), string]))
     ], T).
 
+test(typeStatement_gvLetTuple, [nondet]) :-
+    deleteGVars(),
+    typeStatement(gvLetTuple([x, y], tupleExp([int, float])), unit),
+    gvar(x, int),
+    gvar(y, float).
+
+test(infer_gvLetTuple_bindings_usable, [nondet, true(T == int)]) :-
+    infer([
+        gvLetTuple([x, y], tupleExp([int, float])),
+        exprStmt(iplus(x, int))
+    ], T),
+    gvar(x, int),
+    gvar(y, float).
+
+test(infer_gvLetTuple_arity_mismatch, [fail]) :-
+    infer([
+        gvLetTuple([x, y, z], tupleExp([int, float]))
+    ], _).
+
+test(infer_gvLetTuple_bad_rhs, [fail]) :-
+    infer([
+        gvLetTuple([x, y], int)
+    ], _).
+
+test(infer_gvLetTuple_nested_tuple, [nondet, true(T == tuple([int, float]))]) :-
+    infer([
+        gvLetTuple([pair, label], tupleExp([tupleExp([int, float]), string])),
+        exprStmt(pair)
+    ], T),
+    gvar(pair, tuple([int, float])),
+    gvar(label, string).
+
+test(typeExp_sumVal_left, [nondet, true(T == sum([left-int, right-string]))]) :-
+    typeExp(sumVal(left, int, sum([left-int, right-string])), T).
+
+test(typeExp_sumVal_right, [nondet, true(T == sum([left-int, right-string]))]) :-
+    typeExp(sumVal(right, string, sum([left-int, right-string])), T).
+
+test(typeExp_sumVal_bad_tag, [fail]) :-
+    typeExp(sumVal(middle, int, sum([left-int, right-string])), _).
+
+test(typeExp_sumVal_bad_payload, [fail]) :-
+    typeExp(sumVal(left, string, sum([left-int, right-string])), _).
+
+test(infer_sumVal_exprStmt, [nondet, true(T == sum([left-int, right-string]))]) :-
+    infer([
+        exprStmt(sumVal(left, int, sum([left-int, right-string])))
+    ], T).
+
 :-end_tests(typeInf).
