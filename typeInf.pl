@@ -14,6 +14,12 @@ typeExp(Fct, T):-
     functionType(Fname, TArgs), /* get type of arguments from definition */
     typeExpList(FType, TArgs). /* recurisvely match types */
 
+/* resolve named variables through the global environment */
+typeExp(Name, T):-
+    atom(Name),
+    gvar(Name, T),
+    \+ is_list(T).
+
 /* propagate types */
 typeExp(T, T).
 
@@ -33,6 +39,28 @@ typeStatement(gvLet(Name, T, Code), unit):-
     typeExp(Code, T), /* infer the type of Code and ensure it is T */
     bType(T), /* make sure we have an infered type */
     asserta(gvar(Name, T)). /* add definition to database */
+
+/* global function definition */
+typeStatement(gfLet(Name, ArgNames, ArgTypes, ReturnType, Body), unit):-
+    atom(Name),
+    is_list(ArgNames),
+    is_list(ArgTypes),
+    same_length(ArgNames, ArgTypes),
+    append(ArgTypes, [ReturnType], FType),
+    bType(FType),
+    assertz(gvar(Name, FType), FRef),
+    (
+        setup_call_cleanup(
+            assertArgBindings(ArgNames, ArgTypes, ArgRefs),
+            typeStatement(Body, ReturnType),
+            deleteBindings(ArgRefs)
+        )
+    ->
+        true
+    ;
+        erase(FRef),
+        fail
+    ).
 
 /* expression statement */
 typeStatement(exprStmt(Expr), T):-
@@ -90,6 +118,18 @@ bType([H|T]):- bType(H), bType(T).
 */
 
 deleteGVars() :- retractall(gvar(_, _)).
+
+assertArgBindings([], [], []).
+assertArgBindings([Name|Names], [Type|Types], [Ref|Refs]):-
+    atom(Name),
+    bType(Type),
+    assertz(gvar(Name, Type), Ref),
+    assertArgBindings(Names, Types, Refs).
+
+deleteBindings([]).
+deleteBindings([Ref|Refs]):-
+    erase(Ref),
+    deleteBindings(Refs).
 
 /*  builtin functions
     Each definition specifies the name and the 

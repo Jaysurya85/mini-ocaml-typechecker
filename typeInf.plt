@@ -86,4 +86,41 @@ test(infer_block, [nondet, true(T == int)]) :-
 test(infer_nested_block, [nondet, true(T == float)]) :-
     infer([block([exprStmt(print(string)), block([exprStmt(iToFloat(int))])])], T).
 
+test(typeExp_global_var_lookup, [nondet, true(T == int)]) :-
+    deleteGVars(),
+    asserta(gvar(v, int)),
+    typeExp(v, T).
+
+test(typeStatement_gfLet, [nondet]) :-
+    deleteGVars(),
+    typeStatement(gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))), unit),
+    gvar(add, [int, int, int]),
+    \+ gvar(x, _),
+    \+ gvar(y, _),
+    typeExp(add(A, B), T),
+    assertion(A == int),
+    assertion(B == int),
+    assertion(T == int).
+
+test(infer_gfLet_call, [nondet, true(T == int)]) :-
+    infer([
+        gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))),
+        exprStmt(add(int, int))
+    ], T).
+
+test(infer_gfLet_block_body, [nondet, true(T == int)]) :-
+    infer([
+        gfLet(add, [x, y], [int, int], int,
+              block([exprStmt(print(string)), exprStmt(iplus(x, y))])),
+        exprStmt(add(int, int))
+    ], T).
+
+test(gfLet_argument_cleanup_preserves_global, [nondet]) :-
+    deleteGVars(),
+    asserta(gvar(x, string)),
+    typeStatement(gfLet(id, [x], [int], int, exprStmt(x)), unit),
+    gvar(id, [int, int]),
+    gvar(x, string),
+    \+ gvar(x, int).
+
 :-end_tests(typeInf).
