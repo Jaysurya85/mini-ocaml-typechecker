@@ -99,9 +99,18 @@ deleteGVars() :- retractall(gvar(_, _)).
 */
 
 fType(iplus, [int,int,int]).
+fType(iminus, [int,int,int]).
+fType(imul, [int,int,int]).
+fType(idiv, [int,int,int]).
 fType(fplus, [float, float, float]).
+fType(fminus, [float,float,float]).
+fType(fmul, [float,float,float]).
+fType(fdiv, [float,float,float]).
 fType(fToInt, [float,int]).
 fType(iToFloat, [int,float]).
+fType(ieq, [int,int,int]).
+fType(feq, [float,float,int]).
+fType(streq, [string,string,int]).
 fType(print, [_X, unit]). /* simple print */
 
 /* Find function signature
