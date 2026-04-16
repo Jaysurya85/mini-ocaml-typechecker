@@ -215,4 +215,65 @@ test(forStmt_cleanup_preserves_global, [nondet, true(T == string)]) :-
     gvar(i, T),
     \+ gvar(i, int).
 
+test(infer_exprStmt_float_builtin, [nondet, true(T == float)]) :-
+    infer([exprStmt(fplus(float, float))], T).
+
+test(infer_block_last_unit, [nondet, true(T == unit)]) :-
+    infer([block([exprStmt(iplus(int, int)), exprStmt(print(string))])], T).
+
+test(infer_multiple_gfLets, [nondet, true(T == int)]) :-
+    infer([
+        gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))),
+        gfLet(twice, [z], [int], int, exprStmt(add(z, z))),
+        exprStmt(twice(int))
+    ], T).
+
+test(infer_letIn_inside_block, [nondet, true(T == int)]) :-
+    infer([
+        block([
+            exprStmt(print(string)),
+            exprStmt(letIn(x, int, int, imul(x, int)))
+        ])
+    ], T).
+
+test(infer_ifStmt_with_letIn_branches, [nondet, true(T == int)]) :-
+    infer([
+        ifStmt(ieq(int, int),
+               block([exprStmt(letIn(x, int, int, iplus(x, int)))]),
+               block([exprStmt(letIn(y, int, int, iminus(y, int)))]))
+    ], T).
+
+test(infer_forStmt_after_global_let, [nondet, true(T == unit)]) :-
+    infer([
+        gvLet(limit, int, int),
+        forStmt(i, int, int, block([exprStmt(print(i))]))
+    ], T),
+    gvar(limit, int).
+
+test(infer_invalid_expr_mismatch, [fail]) :-
+    infer([exprStmt(iplus(int, float))], _).
+
+test(infer_invalid_gfLet_bad_return, [fail]) :-
+    infer([
+        gfLet(add_bad, [x, y], [int, int], float, exprStmt(iplus(x, y)))
+    ], _).
+
+test(infer_invalid_gfLet_bad_args, [fail]) :-
+    infer([
+        gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))),
+        exprStmt(add(int, float))
+    ], _).
+
+test(infer_invalid_if_branch_mismatch, [fail]) :-
+    infer([
+        ifStmt(ieq(int, int),
+               block([exprStmt(int)]),
+               block([exprStmt(float)]))
+    ], _).
+
+test(infer_invalid_for_body, [fail]) :-
+    infer([
+        forStmt(i, int, int, exprStmt(i))
+    ], _).
+
 :-end_tests(typeInf).
