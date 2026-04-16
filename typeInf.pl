@@ -126,6 +126,13 @@ typeStatement(forStmt(VarName, StartExpr, EndExpr, Body), unit):-
         erase(Ref)
     ).
 
+/* match statement */
+typeStatement(matchStmt(Expr, Cases), T):-
+    typeExp(Expr, sum(Variants)),
+    is_list(Cases),
+    matchCases(Cases, Variants, T),
+    bType(T).
+
 /* Code is simply a list of statements. The type is 
     the type of the last statement 
 */
@@ -199,6 +206,18 @@ assertGlobalBindings([Name|Names], [Type|Types]):-
     bType(Type),
     asserta(gvar(Name, Type)),
     assertGlobalBindings(Names, Types).
+
+matchCases([], [], _).
+matchCases([case(Tag, VarName, ThenStmt)|Cases], Variants, T):-
+    atom(Tag),
+    atom(VarName),
+    select(Tag-VarType, Variants, RemainingVariants),
+    setup_call_cleanup(
+        asserta(gvar(VarName, VarType), Ref),
+        once(typeStatement(ThenStmt, T)),
+        erase(Ref)
+    ),
+    matchCases(Cases, RemainingVariants, T).
 
 /*  builtin functions
     Each definition specifies the name and the 

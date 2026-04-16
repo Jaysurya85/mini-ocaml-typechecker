@@ -358,4 +358,77 @@ test(infer_sumVal_exprStmt, [nondet, true(T == sum([left-int, right-string]))]) 
         exprStmt(sumVal(left, int, sum([left-int, right-string])))
     ], T).
 
+test(typeStatement_matchStmt, [nondet, true(T == int)]) :-
+    typeStatement(
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(iplus(x, int))),
+                case(right, y, block([exprStmt(print(y)), exprStmt(int)]))
+            ]),
+        T).
+
+test(infer_matchStmt, [nondet, true(T == int)]) :-
+    infer([
+        matchStmt(
+            sumVal(right, string, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(iplus(x, int))),
+                case(right, y, block([exprStmt(print(y)), exprStmt(int)]))
+            ])
+    ], T).
+
+test(infer_matchStmt_reordered_cases, [nondet, true(T == int)]) :-
+    infer([
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(right, y, block([exprStmt(print(y)), exprStmt(int)])),
+                case(left, x, exprStmt(iplus(x, int)))
+            ])
+    ], T).
+
+test(infer_matchStmt_missing_branch, [fail]) :-
+    infer([
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(x))
+            ])
+    ], _).
+
+test(infer_matchStmt_wrong_constructor, [fail]) :-
+    infer([
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(x)),
+                case(middle, y, exprStmt(y))
+            ])
+    ], _).
+
+test(infer_matchStmt_branch_mismatch, [fail]) :-
+    infer([
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(x)),
+                case(right, y, exprStmt(y))
+            ])
+    ], _).
+
+test(matchStmt_cleanup_preserves_global, [nondet, true(T == string)]) :-
+    deleteGVars(),
+    asserta(gvar(x, string)),
+    typeStatement(
+        matchStmt(
+            sumVal(left, int, sum([left-int, right-string])),
+            [
+                case(left, x, exprStmt(iplus(x, int))),
+                case(right, y, block([exprStmt(print(y)), exprStmt(int)]))
+            ]),
+        int),
+    gvar(x, T),
+    \+ gvar(x, int).
+
 :-end_tests(typeInf).
