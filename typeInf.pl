@@ -62,6 +62,13 @@ typeStatement(gvLet(Name, T, Code), unit):-
     bType(T), /* make sure we have an infered type */
     asserta(gvar(Name, T)). /* add definition to database */
 
+/* tuple unpacking global variable definition */
+typeStatement(gvLetTuple(Names, TupleExpr), unit):-
+    is_list(Names),
+    typeExp(TupleExpr, tuple(Types)),
+    same_length(Names, Types),
+    assertGlobalBindings(Names, Types).
+
 /* global function definition */
 typeStatement(gfLet(Name, ArgNames, ArgTypes, ReturnType, Body), unit):-
     atom(Name),
@@ -171,6 +178,13 @@ deleteBindings([]).
 deleteBindings([Ref|Refs]):-
     erase(Ref),
     deleteBindings(Refs).
+
+assertGlobalBindings([], []).
+assertGlobalBindings([Name|Names], [Type|Types]):-
+    atom(Name),
+    bType(Type),
+    asserta(gvar(Name, Type)),
+    assertGlobalBindings(Names, Types).
 
 /*  builtin functions
     Each definition specifies the name and the 
