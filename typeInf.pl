@@ -4,6 +4,17 @@
 
 :- dynamic gvar/2.
 
+/* local let-in expression */
+typeExp(letIn(Name, VarType, ValueExpr, InExpr), T):-
+    atom(Name),
+    bType(VarType),
+    typeExp(ValueExpr, VarType),
+    setup_call_cleanup(
+        asserta(gvar(Name, VarType), Ref),
+        once(typeExp(InExpr, T)),
+        erase(Ref)
+    ).
+
 typeExp(Fct, T):-
     \+ var(Fct), /* make sure Fct is not a variable */ 
     \+ atom(Fct), /* or an atom */
@@ -52,7 +63,7 @@ typeStatement(gfLet(Name, ArgNames, ArgTypes, ReturnType, Body), unit):-
     (
         setup_call_cleanup(
             assertArgBindings(ArgNames, ArgTypes, ArgRefs),
-            typeStatement(Body, ReturnType),
+            once(typeStatement(Body, ReturnType)),
             deleteBindings(ArgRefs)
         )
     ->
@@ -123,7 +134,7 @@ assertArgBindings([], [], []).
 assertArgBindings([Name|Names], [Type|Types], [Ref|Refs]):-
     atom(Name),
     bType(Type),
-    assertz(gvar(Name, Type), Ref),
+    asserta(gvar(Name, Type), Ref),
     assertArgBindings(Names, Types, Refs).
 
 deleteBindings([]).

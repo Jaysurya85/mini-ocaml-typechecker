@@ -123,4 +123,26 @@ test(gfLet_argument_cleanup_preserves_global, [nondet]) :-
     gvar(x, string),
     \+ gvar(x, int).
 
+test(typeExp_letIn, [nondet, true(T == int)]) :-
+    typeExp(letIn(x, int, int, iplus(x, int)), T).
+
+test(typeExp_letIn_mismatch, [fail]) :-
+    typeExp(letIn(x, int, float, x), _).
+
+test(infer_letIn_exprStmt, [nondet, true(T == int)]) :-
+    infer([exprStmt(letIn(x, int, int, iplus(x, int)))], T).
+
+test(letIn_cleanup_preserves_global, [nondet, true(T == string)]) :-
+    deleteGVars(),
+    asserta(gvar(x, string)),
+    typeExp(letIn(x, int, int, x), int),
+    gvar(x, T),
+    \+ gvar(x, int).
+
+test(letIn_inside_gfLet_body, [nondet, true(T == int)]) :-
+    infer([
+        gfLet(add1, [y], [int], int, exprStmt(letIn(x, int, y, iplus(x, int)))),
+        exprStmt(add1(int))
+    ], T).
+
 :-end_tests(typeInf).
