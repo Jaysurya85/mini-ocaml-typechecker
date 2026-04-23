@@ -36,20 +36,6 @@ Run tests directly with SWI-Prolog:
 swipl -q -g "consult('typeInf.plt'), run_tests, halt."
 ```
 
-Open an interactive session:
-
-```bash
-swipl
-```
-
-Then inside Prolog:
-
-```prolog
-[typeInf].
-consult('typeInf.plt').
-run_tests.
-```
-
 ## Entry Point
 
 The main top-level predicate is:
