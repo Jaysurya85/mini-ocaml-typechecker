@@ -1,10 +1,6 @@
-/* match functions by unifying with arguments 
-    and infering the result
-*/
-
 :- dynamic gvar/2.
 
-/* local let-in expression */
+/* Local let-in expression with scoped binding. */
 typeExp(letIn(Name, VarType, ValueExpr, InExpr), T):-
     atom(Name),
     bType(VarType),
@@ -15,12 +11,12 @@ typeExp(letIn(Name, VarType, ValueExpr, InExpr), T):-
         erase(Ref)
     ).
 
-/* tuple expression */
+/* Tuple expression. */
 typeExp(tupleExp(Exprs), tuple(Types)):-
     is_list(Exprs),
     typeExpTuple(Exprs, Types).
 
-/* sum value expression */
+/* Sum value expression. */
 typeExp(sumVal(Tag, Expr, sum(Variants)), sum(Variants)):-
     atom(Tag),
     bType(sum(Variants)),
@@ -28,29 +24,29 @@ typeExp(sumVal(Tag, Expr, sum(Variants)), sum(Variants)):-
     typeExp(Expr, Type).
 
 typeExp(Fct, T):-
-    \+ var(Fct), /* make sure Fct is not a variable */ 
-    \+ atom(Fct), /* or an atom */
-    functor(Fct, Fname, _Nargs), /* ensure we have a functor */
-    !, /* if we make it here we do not try anything else */
-    Fct =.. [Fname|Args], /* get list of arguments */
-    append(Args, [T], FType), /* make it loook like a function signature */
-    functionType(Fname, TArgs), /* get type of arguments from definition */
-    typeExpList(FType, TArgs). /* recurisvely match types */
+    \+ var(Fct),
+    \+ atom(Fct),
+    functor(Fct, Fname, _Nargs),
+    !,
+    Fct =.. [Fname|Args],
+    append(Args, [T], FType),
+    functionType(Fname, TArgs),
+    typeExpList(FType, TArgs).
 
-/* resolve named variables through the global environment */
+/* Resolve named variables from the environment. */
 typeExp(Name, T):-
     atom(Name),
     gvar(Name, T),
     \+ is_list(T).
 
-/* propagate types */
+/* Already-known type. */
 typeExp(T, T).
 
-/* list version to allow function mathine */
+/* Match expression lists against expected types. */
 typeExpList([], []).
 typeExpList([Hin|Tin], [Hout|Tout]):-
-    typeExp(Hin, Hout), /* type infer the head */
-    typeExpList(Tin, Tout). /* recurse */
+    typeExp(Hin, Hout),
+    typeExpList(Tin, Tout).
 
 typeExpTuple([], []).
 typeExpTuple([Expr|Exprs], [Type|Types]):-
@@ -58,25 +54,21 @@ typeExpTuple([Expr|Exprs], [Type|Types]):-
     bType(Type),
     typeExpTuple(Exprs, Types).
 
-/* TODO: add statements types and their type checking */
-/* global variable definition
-    Example:
-        gvLet(v, T, int) ~ let v = 3;
- */
+/* Global variable definition. */
 typeStatement(gvLet(Name, T, Code), unit):-
-    atom(Name), /* make sure we have a bound name */
-    typeExp(Code, T), /* infer the type of Code and ensure it is T */
-    bType(T), /* make sure we have an infered type */
-    asserta(gvar(Name, T)). /* add definition to database */
+    atom(Name),
+    typeExp(Code, T),
+    bType(T),
+    asserta(gvar(Name, T)).
 
-/* tuple unpacking global variable definition */
+/* Tuple unpacking for globals. */
 typeStatement(gvLetTuple(Names, TupleExpr), unit):-
     is_list(Names),
     typeExp(TupleExpr, tuple(Types)),
     same_length(Names, Types),
     assertGlobalBindings(Names, Types).
 
-/* global function definition */
+/* Global function definition with scoped arguments. */
 typeStatement(gfLet(Name, ArgNames, ArgTypes, ReturnType, Body), unit):-
     atom(Name),
     is_list(ArgNames),
@@ -98,24 +90,24 @@ typeStatement(gfLet(Name, ArgNames, ArgTypes, ReturnType, Body), unit):-
         fail
     ).
 
-/* expression statement */
+/* Expression statement. */
 typeStatement(exprStmt(Expr), T):-
     typeExp(Expr, T),
     bType(T).
 
-/* block statement */
+/* Block statement. */
 typeStatement(block(Code), T):-
     is_list(Code),
     typeCode(Code, T).
 
-/* if statement */
+/* If statement. */
 typeStatement(ifStmt(Cond, ThenBlock, ElseBlock), T):-
     typeExp(Cond, int),
     typeStatement(ThenBlock, T),
     typeStatement(ElseBlock, T),
     bType(T).
 
-/* for statement */
+/* For loop with scoped loop variable. */
 typeStatement(forStmt(VarName, StartExpr, EndExpr, Body), unit):-
     atom(VarName),
     typeExp(StartExpr, int),
@@ -126,41 +118,34 @@ typeStatement(forStmt(VarName, StartExpr, EndExpr, Body), unit):-
         erase(Ref)
     ).
 
-/* match statement */
+/* Match must cover each sum variant. */
 typeStatement(matchStmt(Expr, Cases), T):-
     typeExp(Expr, sum(Variants)),
     is_list(Cases),
     matchCases(Cases, Variants, T),
     bType(T).
 
-/* Code is simply a list of statements. The type is 
-    the type of the last statement 
-*/
+/* A block has the type of its last statement. */
 typeCode([S], T):-typeStatement(S, T).
 typeCode([S, S2|Code], T):-
     typeStatement(S,_T),
     typeCode([S2|Code], T).
 
-/* top level function */
+/* Top-level inference entry point. */
 infer(Code, T) :-
-    is_list(Code), /* make sure Code is a list */
-    deleteGVars(), /* delete all global definitions */
+    is_list(Code),
+    deleteGVars(),
     typeCode(Code, T).
 
-/* Basic types
-    TODO: add more types if needed
- */
+/* Basic types. */
 bType(int).
 bType(float).
 bType(string).
-bType(unit). /* unit type for things that are not expressions */
+bType(unit).
 bType(tuple(Types)):- is_list(Types), bType(Types).
 bType(sum(Variants)):- is_list(Variants), bTypeSumVariants(Variants).
-/*  functions type.
-    The type is a list, the last element is the return type
-    E.g. add: int->int->int is represented as [int, int, int]
-    and can be called as add(1,2)->3
- */
+
+/* Function types keep the return type last. */
 bType([H]):- bType(H).
 bType([H|T]):- bType(H), bType(T).
 
@@ -169,22 +154,6 @@ bTypeSumVariants([Tag-Type|Variants]):-
     atom(Tag),
     bType(Type),
     bTypeSumVariants(Variants).
-
-/*
-    TODO: as you encounter global variable definitions
-    or global functions add their definitions to 
-    the database using:
-        asserta( gvar(Name, Type) )
-    To check the types as you encounter them in the code
-    use:
-        gvar(Name, Type) with the Name bound to the name.
-    Type will be bound to the global type
-    Examples:
-        g
-
-    Call the predicate deleveGVars() to delete all global 
-    variables. Best wy to do this is in your top predicate
-*/
 
 deleteGVars() :- retractall(gvar(_, _)).
 
@@ -207,6 +176,7 @@ assertGlobalBindings([Name|Names], [Type|Types]):-
     asserta(gvar(Name, Type)),
     assertGlobalBindings(Names, Types).
 
+/* Match cases add the case variable only inside that branch. */
 matchCases([], [], _).
 matchCases([case(Tag, VarName, ThenStmt)|Cases], Variants, T):-
     atom(Tag),
@@ -219,12 +189,7 @@ matchCases([case(Tag, VarName, ThenStmt)|Cases], Variants, T):-
     ),
     matchCases(Cases, RemainingVariants, T).
 
-/*  builtin functions
-    Each definition specifies the name and the 
-    type as a function type
-
-    TODO: add more functions
-*/
+/* Built-in function types. */
 
 fType(iplus, [int,int,int]).
 fType(iminus, [int,int,int]).
@@ -239,20 +204,15 @@ fType(iToFloat, [int,float]).
 fType(ieq, [int,int,int]).
 fType(feq, [float,float,int]).
 fType(streq, [string,string,int]).
-fType(print, [_X, unit]). /* simple print */
+fType(print, [_X, unit]).
 
-/* Find function signature
-   A function is either buld in using fType or
-   added as a user definition with gvar(fct, List)
-*/
+/* Find user-defined or built-in function signatures. */
 
-% Check the user defined functions first
 functionType(Name, Args):-
     gvar(Name, Args),
-    is_list(Args). % make sure we have a function not a simple variable
+    is_list(Args).
 
-% Check first built in functions
 functionType(Name, Args) :-
-    fType(Name, Args), !. % make deterministic
+    fType(Name, Args), !.
 
 gvar(_, _) :- false().
