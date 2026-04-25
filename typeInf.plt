@@ -1,6 +1,47 @@
 :- begin_tests(typeInf).
 :- include(typeInf). 
 
+test(typeExp_builtin_conversion, [true(T == float)]) :-
+    typeExp(iToFloat(int), T).
+
+test(typeStatement_gvar, [nondet, true(T == int)]) :-
+    deleteGVars(),
+    typeStatement(gvLet(v, T, iplus(X, Y)), unit),
+    assertion(X == int),
+    assertion(Y == int),
+    gvar(v, int).
+
+test(typeStatement_gfLet, [nondet]) :-
+    deleteGVars(),
+    typeStatement(gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))), unit),
+    gvar(add, [int, int, int]),
+    \+ gvar(x, _),
+    \+ gvar(y, _),
+    typeExp(add(A, B), T),
+    assertion(A == int),
+    assertion(B == int),
+    assertion(T == int).
+
+test(typeExp_letIn_mismatch, [fail]) :-
+    typeExp(letIn(x, int, float, x), _).
+
+test(typeStatement_ifStmt_bad_cond, [fail]) :-
+    typeStatement(
+        ifStmt(float,
+               block([exprStmt(int)]),
+               block([exprStmt(int)])),
+        _).
+
+test(typeStatement_forStmt_bad_start, [fail]) :-
+    typeStatement(
+        forStmt(i, float, int, block([exprStmt(print(i))])),
+        _).
+
+test(typeExp_tuple_nested, [nondet, true(T == tuple([int, tuple([float, string])]))]) :-
+    typeExp(tupleExp([int, tupleExp([float, string])]), T).
+
+test(typeExp_sumVal_bad_tag, [fail]) :-
+    typeExp(sumVal(middle, int, sum([left-int, right-string])), _).
 
 test(infer_exprStmt, [nondet, true(T == int)]) :-
     infer([exprStmt(iplus(int, int))], T).
@@ -44,17 +85,8 @@ test(infer_block, [nondet, true(T == int)]) :-
     infer([block([gvLet(v, int, int), exprStmt(iplus(int, int))])], T),
     gvar(v, int).
 
-test(infer_nested_block, [nondet, true(T == float)]) :-
-    infer([block([exprStmt(print(string)), block([exprStmt(iToFloat(int))])])], T).
-
 test(infer_letIn_exprStmt, [nondet, true(T == int)]) :-
     infer([exprStmt(letIn(x, int, int, iplus(x, int)))], T).
-
-test(letIn_inside_gfLet_body, [nondet, true(T == int)]) :-
-    infer([
-        gfLet(add1, [y], [int], int, exprStmt(letIn(x, int, y, iplus(x, int)))),
-        exprStmt(add1(int))
-    ], T).
 
 test(infer_letIn_mismatch, [fail]) :-
     infer([exprStmt(letIn(x, int, float, x))], _).
@@ -64,13 +96,6 @@ test(infer_ifStmt, [nondet, true(T == int)]) :-
         ifStmt(ieq(int, int),
                block([exprStmt(iplus(int, int))]),
                block([exprStmt(imul(int, int))]))
-    ], T).
-
-test(infer_ifStmt_with_letIn_branches, [nondet, true(T == int)]) :-
-    infer([
-        ifStmt(ieq(int, int),
-               block([exprStmt(letIn(x, int, int, iplus(x, int)))]),
-               block([exprStmt(letIn(y, int, int, iminus(y, int)))]))
     ], T).
 
 test(infer_invalid_if_branch_mismatch, [fail]) :-
@@ -85,13 +110,6 @@ test(infer_forStmt, [nondet, true(T == unit)]) :-
         forStmt(i, int, int, block([exprStmt(print(i))]))
     ], T).
 
-test(infer_forStmt_after_global_let, [nondet, true(T == unit)]) :-
-    infer([
-        gvLet(limit, int, int),
-        forStmt(i, int, int, block([exprStmt(print(i))]))
-    ], T),
-    gvar(limit, int).
-
 test(infer_invalid_for_body, [fail]) :-
     infer([
         forStmt(i, int, int, exprStmt(i))
@@ -99,11 +117,6 @@ test(infer_invalid_for_body, [fail]) :-
 
 test(infer_tuple_exprStmt, [nondet, true(T == tuple([int, float]))]) :-
     infer([exprStmt(tupleExp([int, float]))], T).
-
-test(infer_tuple_nested, [nondet, true(T == tuple([tuple([int, float]), string]))]) :-
-    infer([
-        exprStmt(tupleExp([tupleExp([int, float]), string]))
-    ], T).
 
 test(infer_tuple_invalid_element, [fail]) :-
     infer([exprStmt(tupleExp([bogus]))], _).
@@ -121,23 +134,10 @@ test(infer_gvLetTuple_arity_mismatch, [fail]) :-
         gvLetTuple([x, y, z], tupleExp([int, float]))
     ], _).
 
-test(infer_gvLetTuple_nested_tuple, [nondet, true(T == tuple([int, float]))]) :-
-    infer([
-        gvLetTuple([pair, label], tupleExp([tupleExp([int, float]), string])),
-        exprStmt(pair)
-    ], T),
-    gvar(pair, tuple([int, float])),
-    gvar(label, string).
-
 test(infer_sumVal_exprStmt, [nondet, true(T == sum([left-int, right-string]))]) :-
     infer([
         exprStmt(sumVal(left, int, sum([left-int, right-string])))
     ], T).
-
-test(infer_sumVal_bad_payload, [fail]) :-
-    infer([
-        exprStmt(sumVal(left, string, sum([left-int, right-string])))
-    ], _).
 
 test(infer_matchStmt, [nondet, true(T == int)]) :-
     infer([

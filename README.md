@@ -19,8 +19,9 @@ The implementation supports:
 
 The current test suite contains:
 
-- `74` total tests
-- `37` `infer/2` entry-point tests
+- `31` total tests
+- `23` `infer/2` entry-point tests
+- `8` direct predicate tests
 
 ## How To Run
 
