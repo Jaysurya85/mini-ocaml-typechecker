@@ -1,8 +1,17 @@
 :- begin_tests(typeInf).
-:- include(typeInf). 
+:- include(typeInf).
 
+/* direct typeExp tests */
 test(typeExp_builtin_conversion, [true(T == float)]) :-
     typeExp(iToFloat(int), T).
+
+test(typeExp_iplus_infers_args, [true(T == int)]) :-
+    typeExp(iplus(X, Y), T),
+    assertion(X == int),
+    assertion(Y == int).
+
+test(typeExp_iplus_bad_return, [fail]) :-
+    typeExp(iplus(int, int), float).
 
 test(typeStatement_gvar, [nondet, true(T == int)]) :-
     deleteGVars(),
@@ -22,8 +31,20 @@ test(typeStatement_gfLet, [nondet]) :-
     assertion(B == int),
     assertion(T == int).
 
+test(typeStatement_gfLet_infers_signature, [nondet]) :-
+    deleteGVars(),
+    typeStatement(gfLet(add, [x, y], [A, B], R, exprStmt(iplus(x, y))), unit),
+    assertion(A == int),
+    assertion(B == int),
+    assertion(R == int),
+    gvar(add, [int, int, int]).
+
 test(typeExp_letIn_mismatch, [fail]) :-
     typeExp(letIn(x, int, float, x), _).
+
+test(typeExp_letIn_infers_local_type, [nondet, true(T == int)]) :-
+    typeExp(letIn(x, XType, int, iplus(x, int)), T),
+    assertion(XType == int).
 
 test(typeStatement_ifStmt_bad_cond, [fail]) :-
     typeStatement(
@@ -43,6 +64,7 @@ test(typeExp_tuple_nested, [nondet, true(T == tuple([int, tuple([float, string])
 test(typeExp_sumVal_bad_tag, [fail]) :-
     typeExp(sumVal(middle, int, sum([left-int, right-string])), _).
 
+/* infer tests */
 test(infer_exprStmt, [nondet, true(T == int)]) :-
     infer([exprStmt(iplus(int, int))], T).
 
@@ -51,8 +73,10 @@ test(infer_invalid_expr_mismatch, [fail]) :-
 
 test(infer_gvar, [nondet]) :-
     infer([gvLet(v, T, iplus(X, Y))], unit),
-    assertion(T==int), assertion(X==int), assertion(Y=int),
-    gvar(v,int).
+    assertion(T == int),
+    assertion(X == int),
+    assertion(Y == int),
+    gvar(v, int).
 
 test(infer_gvLet_bad_type, [fail]) :-
     infer([gvLet(v, int, float)], _).
@@ -62,6 +86,15 @@ test(infer_gfLet_call, [nondet, true(T == int)]) :-
         gfLet(add, [x, y], [int, int], int, exprStmt(iplus(x, y))),
         exprStmt(add(int, int))
     ], T).
+
+test(infer_gfLet_infers_signature, [nondet]) :-
+    infer([
+        gfLet(add, [x, y], [A, B], R, exprStmt(iplus(x, y)))
+    ], unit),
+    assertion(A == int),
+    assertion(B == int),
+    assertion(R == int),
+    gvar(add, [int, int, int]).
 
 test(infer_multiple_gfLets, [nondet, true(T == int)]) :-
     infer([
@@ -85,11 +118,21 @@ test(infer_block, [nondet, true(T == int)]) :-
     infer([block([gvLet(v, int, int), exprStmt(iplus(int, int))])], T),
     gvar(v, int).
 
+test(infer_returnStmt, [nondet, true(T == int)]) :-
+    infer([returnStmt(iplus(int, int))], T).
+
 test(infer_letIn_exprStmt, [nondet, true(T == int)]) :-
     infer([exprStmt(letIn(x, int, int, iplus(x, int)))], T).
 
+test(infer_letIn_infers_type, [nondet, true(T == int)]) :-
+    infer([exprStmt(letIn(x, XType, int, iplus(x, int)))], T),
+    assertion(XType == int).
+
 test(infer_letIn_mismatch, [fail]) :-
     infer([exprStmt(letIn(x, int, float, x))], _).
+
+test(infer_letInStmt, [nondet, true(T == int)]) :-
+    infer([letInStmt(x, int, int, exprStmt(iplus(x, int)))], T).
 
 test(infer_ifStmt, [nondet, true(T == int)]) :-
     infer([
@@ -168,4 +211,10 @@ test(infer_matchStmt_branch_mismatch, [fail]) :-
             ])
     ], _).
 
-:-end_tests(typeInf).
+test(infer_failed_run_cleans_globals, [fail]) :-
+    infer([gvLet(v, int, int), exprStmt(iplus(int, float))], _).
+
+test(no_leaked_global_after_failed_infer, [nondet]) :-
+    \+ gvar(v, _).
+
+:- end_tests(typeInf).
